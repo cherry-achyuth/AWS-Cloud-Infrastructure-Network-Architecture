@@ -1,0 +1,54 @@
+flowchart TB
+    %% External Actors
+    subgraph Internet ["Public Internet"]
+        Client["External Client (HTTP Port 80)"]
+        Admin["Administrator Workstation (SSH Port 22 - Trusted IP)"]
+    end
+
+    %% AWS Cloud Boundary
+    subgraph AWSCloud ["AWS Cloud (Region: ap-south-1 Mumbai)"]
+        subgraph VPC ["Amazon VPC (CIDR: 10.0.0.0/16)"]
+            IGW["Internet Gateway (IGW)<br/>Performs 1:1 NAT for Public IPs"]
+
+            %% Availability Zone 1
+            subgraph AZ1 ["Availability Zone: ap-south-1a"]
+                subgraph PublicSubnet1 ["Public Subnet 1 (10.0.1.0/24)"]
+                    DemoEC2["Optional Demo Web Server<br/>(t2.micro / Amazon Linux 2023)<br/>[var.enable_ec2_instance]"]
+                    WebSG["Web Security Group<br/>- Ingress: HTTP (80) 0.0.0.0/0<br/>- Ingress: SSH (22) admin_ssh_cidr<br/>- Egress: 0.0.0.0/0"]
+                end
+
+                subgraph PrivateSubnet1 ["Private Subnet 1 (10.0.11.0/24)"]
+                    PrivateWorkload1["Internal Workload / Database<br/>(No Public IP, No Direct Internet)"]
+                    PrivateSG["Private App Security Group<br/>- Ingress: TCP 8080 from Web SG ID<br/>- Egress: Local VPC CIDR"]
+                end
+            end
+
+            %% Availability Zone 2
+            subgraph AZ2 ["Availability Zone: ap-south-1b"]
+                subgraph PublicSubnet2 ["Public Subnet 2 (10.0.2.0/24)"]
+                    PublicStandby["Reserved for High Availability<br/>(e.g., Application Load Balancer)"]
+                end
+
+                subgraph PrivateSubnet2 ["Private Subnet 2 (10.0.12.0/24)"]
+                    PrivateWorkload2["Standby Database / Worker Node"]
+                end
+            end
+
+            %% Routing Logic
+            subgraph RoutingTables ["Routing Tables & Evaluation (Longest Prefix Match)"]
+                PublicRT["Public Route Table<br/>- 10.0.0.0/16 ➔ local<br/>- 0.0.0.0/0 ➔ igw-xxxx"]
+                PrivateRT["Private Route Table<br/>- 10.0.0.0/16 ➔ local<br/>(Isolated: No 0.0.0.0/0 route)"]
+            end
+        end
+    end
+
+    %% Traffic Connections
+    Client -->|HTTP: 80| IGW
+    Admin -->|SSH: 22 (Whitelisted IP)| IGW
+    IGW --> PublicRT
+    PublicRT --> PublicSubnet1
+    PublicRT --> PublicSubnet2
+
+    DemoEC2 -.->|Allowed via Web SG| PrivateSG
+    PrivateRT --> PrivateSubnet1
+    PrivateRT --> PrivateSubnet2

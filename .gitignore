@@ -1,0 +1,43 @@
+# Local .terraform directories and plugins
+**/.terraform/*
+.terraform/
+.terraform.lock.hcl
+
+# Terraform state files and backups
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Sensitive variable definition files
+*.tfvars
+*.tfvars.json
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration and credentials
+.terraformrc
+terraform.rc
+
+# SSH keys and certificates
+*.pem
+*.key
+*.pub
+*.id_rsa
+*.id_ed25519
+
+# Environment and secret files
+.env
+.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
